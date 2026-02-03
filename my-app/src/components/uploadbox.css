@@ -1,0 +1,215 @@
+.upload-container {
+  width: 100%;
+}
+
+.upload-dropzone {
+  border: 3px dashed #d1d5db;
+  border-radius: 16px;
+  padding: 60px 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fafafa;
+}
+
+.upload-dropzone:hover {
+  border-color: #667eea;
+  background: #f3f4f6;
+}
+
+.upload-dropzone.drag-active {
+  border-color: #667eea;
+  background: #eef2ff;
+  transform: scale(1.02);
+}
+
+.upload-dropzone.has-file {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.upload-icon {
+  font-size: 64px;
+  margin-bottom: 15px;
+  opacity: 0.6;
+}
+
+.upload-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 10px 0;
+}
+
+.upload-text {
+  font-size: 15px;
+  color: #6b7280;
+  margin: 10px 0;
+}
+
+.upload-controls {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.subject-input {
+  flex: 1;
+  min-width: 250px;
+  padding: 14px 18px;
+  font-size: 15px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.subject-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.upload-button {
+  padding: 14px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+}
+
+.upload-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+}
+
+.upload-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.upload-success {
+  margin-top: 15px;
+  padding: 12px 20px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  color: #166534;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Mobile - Extra Small (320px - 480px) */
+@media (max-width: 480px) {
+  .upload-dropzone {
+    padding: 40px 20px;
+    border-radius: 12px;
+  }
+  
+  .upload-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+  
+  .upload-title {
+    font-size: 18px;
+    margin: 8px 0;
+  }
+  
+  .upload-text {
+    font-size: 13px;
+    margin: 8px 0;
+  }
+  
+  .upload-controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .subject-input,
+  .upload-button {
+    width: 100%;
+    min-width: unset;
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+  
+  .upload-success {
+    font-size: 13px;
+    padding: 10px 15px;
+  }
+}
+
+/* Mobile - Small (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .upload-dropzone {
+    padding: 50px 30px;
+  }
+  
+  .upload-icon {
+    font-size: 56px;
+    margin-bottom: 14px;
+  }
+  
+  .upload-title {
+    font-size: 20px;
+    margin: 9px 0;
+  }
+  
+  .upload-text {
+    font-size: 14px;
+    margin: 9px 0;
+  }
+  
+  .upload-controls {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .subject-input,
+  .upload-button {
+    width: 100%;
+    min-width: unset;
+  }
+}
+
+/* Tablet (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .upload-dropzone {
+    padding: 55px 35px;
+  }
+  
+  .upload-icon {
+    font-size: 60px;
+  }
+  
+  .upload-title {
+    font-size: 21px;
+  }
+  
+  .upload-controls {
+    gap: 12px;
+  }
+  
+  .subject-input {
+    min-width: 200px;
+  }
+}
+
+/* Large Desktop (1025px and above) */
+@media (min-width: 1025px) {
+  .upload-dropzone {
+    padding: 60px 40px;
+  }
+  
+  .upload-title {
+    font-size: 22px;
+  }
+}

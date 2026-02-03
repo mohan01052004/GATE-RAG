@@ -1,0 +1,374 @@
+.practicebox-container {
+  margin: 30px 0;
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.practicebox-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.practicebox-header h2 {
+  margin: 0 0 8px;
+  font-size: 26px;
+  color: #1f2937;
+}
+
+.practicebox-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.practicebox-controls {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 18px;
+  background: #f9fafb;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.practicebox-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 120px;
+}
+
+.practicebox-control-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.practicebox-control-group select,
+.practicebox-control-group input {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+}
+
+.practicebox-generate-button {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+  white-space: nowrap;
+}
+
+.practicebox-generate-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.practicebox-generate-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.practicebox-problem-area {
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.practicebox-progress {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e5e7eb;
+  font-weight: 600;
+  color: #374151;
+}
+
+.practicebox-difficulty-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.practicebox-difficulty-badge.easy {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.practicebox-difficulty-badge.medium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.practicebox-difficulty-badge.hard {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.practicebox-question {
+  margin: 20px 0;
+}
+
+.practicebox-question h3 {
+  font-size: 18px;
+  color: #111827;
+  line-height: 1.6;
+}
+
+.practicebox-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.practicebox-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.practicebox-option:hover {
+  border-color: #667eea;
+  background: #f9fafb;
+}
+
+.practicebox-option input[type="radio"] {
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.practicebox-option span {
+  flex: 1;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.practicebox-textarea-wrapper {
+  margin: 20px 0;
+}
+
+.practicebox-textarea {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.practicebox-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.practicebox-actions {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+  justify-content: flex-end;
+}
+
+.practicebox-hint-button {
+  padding: 10px 20px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.practicebox-hint-button:hover {
+  background: #e5e7eb;
+}
+
+.practicebox-submit-button {
+  padding: 10px 24px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.practicebox-submit-button:hover:not(:disabled) {
+  background: #059669;
+}
+
+.practicebox-submit-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.practicebox-hints {
+  padding: 16px;
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.practicebox-hints h4 {
+  margin: 0 0 10px;
+  color: #92400e;
+  font-size: 16px;
+}
+
+.practicebox-hints ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #78350f;
+}
+
+.practicebox-feedback {
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.practicebox-feedback.correct {
+  background: #d1fae5;
+  border-left: 4px solid #10b981;
+  color: #065f46;
+}
+
+.practicebox-feedback.incorrect {
+  background: #fee2e2;
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
+}
+
+.practicebox-feedback-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.practicebox-score {
+  padding: 4px 10px;
+  background: white;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.practicebox-solution {
+  padding: 16px;
+  background: #eff6ff;
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.practicebox-solution h4 {
+  margin: 0 0 10px;
+  color: #1e40af;
+  font-size: 16px;
+}
+
+.practicebox-solution p {
+  margin: 0;
+  color: #1e3a8a;
+  line-height: 1.6;
+}
+
+.practicebox-navigation {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  justify-content: space-between;
+}
+
+.practicebox-nav-button {
+  padding: 10px 20px;
+  background: #6b7280;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.practicebox-nav-button:hover:not(:disabled) {
+  background: #4b5563;
+}
+
+.practicebox-nav-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.practicebox-reset-button {
+  background: #ef4444;
+}
+
+.practicebox-reset-button:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.practicebox-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+  font-size: 15px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .practicebox-container {
+    padding: 16px;
+  }
+
+  .practicebox-controls {
+    flex-direction: column;
+  }
+
+  .practicebox-control-group {
+    width: 100%;
+  }
+
+  .practicebox-generate-button {
+    width: 100%;
+  }
+
+  .practicebox-actions {
+    flex-direction: column;
+  }
+
+  .practicebox-hint-button,
+  .practicebox-submit-button {
+    width: 100%;
+  }
+
+  .practicebox-navigation {
+    flex-direction: column;
+  }
+
+  .practicebox-nav-button {
+    width: 100%;
+  }
+}

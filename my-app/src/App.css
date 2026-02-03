@@ -1,0 +1,264 @@
+.app-container {
+  min-height: 100vh;
+  padding: 0;
+}
+
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  text-align: center;
+  padding: 50px 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.header-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.header-title {
+  font-size: 42px;
+  font-weight: 700;
+  margin: 10px 0;
+  letter-spacing: -0.5px;
+}
+
+.header-subtitle {
+  font-size: 18px;
+  opacity: 0.95;
+  font-weight: 400;
+  margin-top: 10px;
+}
+
+.content-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  background: white;
+  min-height: calc(100vh - 200px);
+}
+
+.upload-section {
+  margin-bottom: 30px;
+}
+
+.welcome-message {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+}
+
+.chat-bubble-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  opacity: 0.7;
+}
+
+.welcome-title {
+  font-size: 28px;
+  color: #374151;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.welcome-text {
+  font-size: 16px;
+  color: #9ca3af;
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.chat-section {
+  margin-top: 30px;
+}
+
+.answer-section {
+  margin-top: 20px;
+}
+
+.mode-tabs {
+  display: flex;
+  gap: 12px;
+  margin: 30px 0 20px;
+  justify-content: center;
+}
+
+.mode-tab {
+  padding: 14px 28px;
+  border: 2px solid #e5e7eb;
+  background: white;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+}
+
+.mode-tab:hover {
+  border-color: #667eea;
+  color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.mode-tab.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.tab-icon {
+  font-size: 20px;
+}
+
+.practice-section {
+  margin-top: 20px;
+}
+
+/* Mobile - Extra Small (320px - 480px) */
+@media (max-width: 480px) {
+  .header {
+    padding: 30px 15px;
+  }
+  
+  .header-icon {
+    font-size: 36px;
+  }
+  
+  .header-title {
+    font-size: 24px;
+    margin: 8px 0;
+  }
+  
+  .header-subtitle {
+    font-size: 14px;
+    margin-top: 8px;
+  }
+  
+  .content-container {
+    padding: 20px 15px;
+    min-height: calc(100vh - 150px);
+  }
+  
+  .welcome-message {
+    padding: 40px 15px;
+  }
+  
+  .chat-bubble-icon {
+    font-size: 50px;
+    margin-bottom: 15px;
+  }
+  
+  .welcome-title {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+  
+  .welcome-text {
+    font-size: 14px;
+  }
+  
+  .upload-section {
+    margin-bottom: 20px;
+  }
+  
+  .chat-section {
+    margin-top: 20px;
+  }
+  
+  .answer-section {
+    margin-top: 15px;
+  }
+  
+  .mode-tabs {
+    flex-direction: column;
+    gap: 10px;
+    margin: 20px 0 15px;
+  }
+  
+  .mode-tab {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+  
+  .tab-icon {
+    font-size: 18px;
+  }
+  
+  .practice-section {
+    margin-top: 15px;
+  }
+}
+
+/* Mobile - Small (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .header-title {
+    font-size: 32px;
+  }
+  
+  .header-subtitle {
+    font-size: 16px;
+  }
+  
+  .header-icon {
+    font-size: 42px;
+  }
+  
+  .content-container {
+    padding: 25px 15px;
+  }
+  
+  .welcome-message {
+    padding: 50px 20px;
+  }
+  
+  .chat-bubble-icon {
+    font-size: 60px;
+  }
+  
+  .welcome-title {
+    font-size: 24px;
+  }
+  
+  .welcome-text {
+    font-size: 15px;
+  }
+}
+
+/* Tablet (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .header-title {
+    font-size: 38px;
+  }
+  
+  .header-subtitle {
+    font-size: 17px;
+  }
+  
+  .content-container {
+    padding: 35px 25px;
+  }
+  
+  .welcome-message {
+    padding: 55px 25px;
+  }
+}
+
+/* Large Desktop (1025px and above) */
+@media (min-width: 1025px) {
+  .header-title {
+    font-size: 42px;
+  }
+  
+  .content-container {
+    padding: 40px 30px;
+  }
+}
