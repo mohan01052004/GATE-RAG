@@ -1,0 +1,448 @@
+# System Architecture - Advanced RAG Integration
+
+## Complete System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       RAG System Architecture                            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Frontend Layer (React)                          │
+│  ┌──────────────┬──────────────┬──────────────┬──────────────────┐    │
+│  │ QueryBox     │ PracticeBox  │ UploadBox    │ DocumentSelector│    │
+│  └──────────────┴──────────────┴──────────────┴──────────────────┘    │
+│                              │                                         │
+│  API Client: api.js ────────→ │                                       │
+└────────────────────────────────┼─────────────────────────────────────┘
+                                 │ HTTP/REST
+                    ┌────────────▼──────────────┐
+┌───────────────────┤    FastAPI Backend        │───────────────────┐
+│                   │    (8000)                 │                   │
+│   ┌──────────────┤                           ├──────────────┐    │
+│   │              │  Routes:                  │              │    │
+│   │   Database   │  ├─ /query/ask            │ Vector Store│    │
+│   │              │  ├─ /query/mcq            │  (Pinecone) │    │
+│   │ PostgreSQL   │  ├─ /query/advanced-*     │             │    │
+│   │              │  ├─ /practice/*           │ 4340+       │    │
+│   │ Documents    │  ├─ /documents/*          │ Vectors     │    │
+│   │ Queries      │  ├─ /upload               │             │    │
+│   │ Practice     │  └─ /health               │             │    │
+│   │ Attempts     │                           │             │    │
+│   │              └───────────────────────────┘              │    │
+│   │                        │                               │    │
+│   └────────────┬───────────┼───────────────────────────────┘    │
+│                │           │                                     │
+└────────────────┼───────────┼─────────────────────────────────────┘
+                 │           │
+         ┌───────▼───────────▼──────────┐
+         │  Service Layer               │
+         │                              │
+         │  ┌────────────────────────┐  │
+         │  │ Advanced RAG Pipeline  │  │
+         │  │  ┌──────────────────┐  │  │
+         │  │  │ Self-Query RAG   │  │  │
+         │  │  └──────────────────┘  │  │
+         │  │  ┌──────────────────┐  │  │
+         │  │  │ HyDE Module      │  │  │
+         │  │  └──────────────────┘  │  │
+         │  │  ┌──────────────────┐  │  │
+         │  │  │ RAG Fusion       │  │  │
+         │  │  └──────────────────┘  │  │
+         │  │  ┌──────────────────┐  │  │
+         │  │  │ Pipeline Orches. │  │  │
+         │  │  └──────────────────┘  │  │
+         │  └────────────────────────┘  │
+         │                              │
+         │  ┌────────────────────────┐  │
+         │  │ Core RAG Services      │  │
+         │  │  ├─ Hybrid Search      │  │
+         │  │  ├─ Multi-Query        │  │
+         │  │  ├─ Embeddings         │  │
+         │  │  ├─ Response Enhance.  │  │
+         │  │  └─ Reranker           │  │
+         │  └────────────────────────┘  │
+         │                              │
+         │  ┌────────────────────────┐  │
+         │  │ Practice System        │  │
+         │  │  ├─ Generator          │  │
+         │  │  └─ Validator          │  │
+         │  └────────────────────────┘  │
+         │                              │
+         │  ┌────────────────────────┐  │
+         │  │ Utility Services       │  │
+         │  │  ├─ PDF Loading        │  │
+         │  │  ├─ Chunking           │  │
+         │  │  ├─ Configuration      │  │
+         │  │  └─ Database           │  │
+         │  └────────────────────────┘  │
+         │                              │
+         └──────────────────────────────┘
+                        │
+                        │
+         ┌──────────────┴──────────────┐
+         │                             │
+    ┌────▼────┐                  ┌─────▼──────┐
+    │ Gemini  │                  │SentenceXfm │
+    │API      │                  │(Embeddings)│
+    └─────────┘                  └────────────┘
+```
+
+---
+
+## Phase 8: Advanced RAG Pipeline Detailed Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    User Query Input                                 │
+│        "Show me hard MCQ on sorting algorithms"                     │
+└─────────────────┬───────────────────────────────────────────────────┘
+                  │
+                  ▼
+        ┌─────────────────────┐
+        │  STAGE 1: SELF-QUERY │  (10-50ms)
+        └─────────────────────┘
+                  │
+        ┌─────────▼──────────┐
+        │ Extract Filters    │
+        │ difficulty: hard   │
+        │ type: MCQ          │
+        │ topic: sorting     │
+        └─────────┬──────────┘
+                  │
+                  ▼
+        ┌─────────────────────────┐
+        │ Route Query             │
+        │ "hard MCQ on sorting"   │
+        │ filters: {difficulty}   │
+        └─────────┬───────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│               STAGE 2: PARALLEL RETRIEVAL (2-3s)                    │
+└─────────────────────────────────────────────────────────────────────┘
+        │
+        ├──────────┬──────────┬──────────┬──────────┐
+        │          │          │          │          │
+        ▼          ▼          ▼          ▼          ▼
+    [BM25]    [Semantic] [HyDE Gen]  [HyDE Ret] [Filters]
+      │          │          │          │          │
+      │          │          ▼          ▼          │
+      │          │     Generate 5    Search with  │
+      │          │     Hypothetical  embeddings   │
+      │          │     Docs:         │            │
+      │          │     - Sorting     Results:     │
+      │          │       techniques  - doc3:0.92  │
+      │          │     - Merge sort  - doc1:0.88  │
+      │          │     - Quick sort  - doc2:0.85  │
+      │          │                                │
+      │ Results: │ Results: ────────────────      │
+      │ doc1:0.95│ doc3:0.92  Results:            │
+      │ doc2:0.87│ doc1:0.88  doc1 (match)       │
+      │ doc3:0.76│ doc2:0.75  doc2 (match)       │
+      │ doc4:0.62│           doc3 (match)        │
+      │          │                                │
+      └──────────┴────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│               STAGE 3: RAG FUSION (50-100ms)                        │
+│                                                                     │
+│   RRF Formula: score = Σ [1 / (k + rank)]  where k=60             │
+│                                                                     │
+│   Ranking Lists:                                                   │
+│   ┌────────────────┐  ┌────────────────┐  ┌───────────────┐      │
+│   │ BM25 Results   │  │ Semantic       │  │ HyDE Results  │      │
+│   ├────────────────┤  ├────────────────┤  ├───────────────┤      │
+│   │ 1. doc1: 0.95  │  │ 1. doc3: 0.92  │  │ 1. doc1: 0.90 │      │
+│   │ 2. doc2: 0.87  │  │ 2. doc1: 0.88  │  │ 2. doc2: 0.85 │      │
+│   │ 3. doc3: 0.76  │  │ 3. doc2: 0.75  │  │ 3. doc3: 0.80 │      │
+│   │ 4. doc4: 0.62  │  │                │  │               │      │
+│   └────────────────┘  └────────────────┘  └───────────────┘      │
+│                                                                     │
+│   RRF Scoring:                                                    │
+│   ┌─────────────────────────────────────────────────────────┐     │
+│   │ doc1: 1/61 + 1/62 + 1/61 = 0.0484 ← BEST (in all 3)    │     │
+│   │ doc3: 1/63 + 1/61 + 1/63 = 0.0317                       │     │
+│   │ doc2: 1/62 + 1/63 + 1/62 = 0.0317                       │     │
+│   │ doc4: 1/64 + 0   + 0   = 0.0156                         │     │
+│   └─────────────────────────────────────────────────────────┘     │
+│                                                                     │
+│   Fused Ranking: doc1 > doc3 ≈ doc2 > doc4                       │
+└─────────────────────────────────────────────────────────────────────┘
+                  │
+                  ▼
+        ┌─────────────────────────────────┐
+        │ STAGE 4: POST-PROCESSING (10ms) │
+        ├─────────────────────────────────┤
+        │ • Deduplication                 │
+        │   - Remove similar content      │
+        │   - Threshold: 0.90             │
+        │                                 │
+        │ • Diversity Ranking (optional)  │
+        │   - Promote different topics    │
+        │                                 │
+        │ • Metadata Enrichment           │
+        │   - Add retrieval scores        │
+        │   - Add method sources          │
+        └─────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    FINAL RESULTS (Top-10)                          │
+├─────────────────────────────────────────────────────────────────────┤
+│ 1. doc1 (fusion_score: 0.0484)                                     │
+│    Topic: Sorting, Difficulty: Hard                                │
+│    Concepts: [quicksort, partitioning, divide-and-conquer]        │
+│    Text: "Quicksort is a divide-and-conquer algorithm that..."    │
+│                                                                     │
+│ 2. doc3 (fusion_score: 0.0317)                                     │
+│    Topic: Sorting, Difficulty: Hard                                │
+│    Concepts: [mergesort, stability, O(n log n)]                   │
+│    Text: "Merge sort maintains relative order of equal..."        │
+│                                                                     │
+│ ... (8 more results)                                               │
+│                                                                     │
+│ Stats:                                                              │
+│ - Result Count: 10                                                 │
+│ - Avg Score: 0.0356                                               │
+│ - Topics Covered: [sorting, searching]                             │
+│ - Total Time: 3.0 seconds                                          │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Component Interaction Matrix
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                   Component Interactions                     │
+├──────────────┬──────────┬────────┬────────┬──────┬────────┐  │
+│              │ Self-Qry │ HyDE   │ Fusion │ Hybrid│ Models│  │
+├──────────────┼──────────┼────────┼────────┼──────┼────────┤  │
+│Advanced RAG  │    ✓     │   ✓    │   ✓    │  ✓   │   ✓   │  │
+│Hybrid Search │    -     │   -    │   -    │  -   │   ✓   │  │
+│Embeddings    │    -     │   ✓    │   -    │  ✓   │   ✓   │  │
+│Multi-Query   │    -     │   -    │   ✓    │  ✓   │   -   │  │
+│Reranker      │    -     │   -    │   -    │  ✓   │   -   │  │
+│DB Layer      │    ✓     │   -    │   -    │  ✓   │   -   │  │
+└──────────────┴──────────┴────────┴────────┴──────┴────────┘  │
+```
+
+---
+
+## Service Dependencies
+
+```
+advanced_rag.py
+├── self_query.py (filter extraction)
+├── hyde.py (hypothetical documents)
+├── rag_fusion.py (result combination)
+├── hybrid_search.py (BM25 + semantic)
+├── multi_query_retrieval.py (expansion)
+├── embeddings.py (embedding model)
+├── reranker.py (cross-encoder)
+└── config.py (configuration)
+
+self_query.py
+├── config.py (Gemini API)
+└── [Gemini SDK or Fallback]
+
+hyde.py
+├── config.py (Gemini API)
+├── embeddings.py (SentenceTransformers)
+└── [Gemini SDK or Fallback]
+
+rag_fusion.py
+└── [NumPy/Python stdlib]
+```
+
+---
+
+## Configuration Hierarchy
+
+```
+┌─────────────────────────────────────┐
+│    query.py: /query/advanced-retrieve
+├─────────────────────────────────────┤
+│ Accepts QueryRequest with:
+│ - use_self_query: bool
+│ - use_hyde: bool
+│ - use_fusion: bool
+└────────────┬────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────┐
+│  advanced_rag.advanced_retrieval()
+├─────────────────────────────────────┤
+│ Orchestrates:
+│ - Self-Query pipeline
+│ - HyDE generation
+│ - Parallel retrieval
+│ - Fusion strategy
+└─────────┬───────────────────────────┘
+          │
+          ├──────────────┬────────────┬──────────┐
+          │              │            │          │
+          ▼              ▼            ▼          ▼
+      self_query     hyde.py     hybrid_      rag_
+        .route()   generate_      search     fusion.
+                   hypothesis                apply_
+```
+
+---
+
+## Error Handling Strategy
+
+```
+advanced_retrieval()
+├─ Self-Query fails? → Use original query
+├─ HyDE fails? → Skip HyDE, use hybrid only
+├─ BM25 fails? → Fallback to semantic only
+├─ Semantic fails? → Fallback to BM25 only
+├─ RAG Fusion fails? → Return best available
+└─ All retrieval fails? → Return empty with error
+
+Each Service Module:
+├─ Try primary method
+├─ On error → Log warning
+├─ Fallback to alternative
+└─ Return best available result
+```
+
+---
+
+## Performance Optimization Strategy
+
+```
+Fast Path (300-500ms):
+Query → Self-Query (rule-based)
+     → Hybrid Search (parallel)
+     → No HyDE
+     → Optional Fusion
+
+Balanced Path (2-3s):
+Query → Self-Query (rule-based)
+     → Parallel Retrieval (all methods)
+     → RAG Fusion
+     → Deduplication
+
+Quality Path (4-5s):
+Query → Self-Query (LLM)
+     → Parallel Retrieval (all methods)
+     → HyDE (5 docs)
+     → RAG Fusion
+     → Diversity Ranking
+```
+
+---
+
+## Data Flow Through System
+
+```
+User Input (Frontend)
+    ↓
+HTTP Request (REST API)
+    ↓
+QueryRequest (Schema Validation)
+    ↓
+/query/advanced-retrieve (Route Handler)
+    ↓
+advanced_retrieval() (Orchestrator)
+    ├─→ self_query.route_query()
+    │   ├─→ Gemini API (optional)
+    │   └─→ Rule-based extraction
+    │
+    ├─→ Parallel Retrievers:
+    │   ├─→ hybrid_search()
+    │   │   ├─→ BM25 on keyword index
+    │   │   ├─→ Semantic on embeddings
+    │   │   └─→ Merge results
+    │   │
+    │   ├─→ hyde.get_hyde_embeddings()
+    │   │   ├─→ Generate hypothetical docs
+    │   │   ├─→ Embed them
+    │   │   └─→ Search with embeddings
+    │   │
+    │   └─→ self_query.build_filter_dict()
+    │       └─→ Apply metadata filters
+    │
+    ├─→ rag_fusion.apply_rag_fusion()
+    │   ├─→ reciprocal_rank_fusion()
+    │   ├─→ deduplicate_fused_results()
+    │   └─→ Optional: diversity ranking
+    │
+    └─→ Format & Return Results
+        ↓
+    HTTP Response (JSON)
+        ↓
+    Frontend Display
+```
+
+---
+
+## Success Metrics
+
+### Retrieval Quality
+```
+Precision (retrieved ÷ relevant): +15-25% improvement
+Recall (found ÷ total relevant):  +10-20% improvement
+F1 Score (harmonic mean):         +20-30% improvement
+Topic Diversity:                   +15-25% improvement
+```
+
+### Performance
+```
+Latency P50: 2-3 seconds
+Latency P99: 4-5 seconds
+Throughput: 30+ req/min
+Error Rate: <0.1%
+```
+
+### User Experience
+```
+Relevant Results (Top-3): 85%+
+User Satisfaction: 4.5/5 stars
+Query Success Rate: 98%+
+```
+
+---
+
+## Integration Points with Existing System
+
+```
+┌────────────────────────────────────────────┐
+│    Existing RAG Query Pipeline             │
+├────────────────────────────────────────────┤
+│                                            │
+│  User Query                                │
+│    ↓                                       │
+│  Query Expansion (query_expansion.py)      │
+│    ↓                                       │
+│  Multi-Query Retrieval (multi_query...)    │ ← CAN USE Advanced RAG HERE
+│    ↓                                       │
+│  Reranking (reranker.py)                   │
+│    ↓                                       │
+│  Response Enhancement (response_enhance)   │
+│    ↓                                       │
+│  Generate Answer (generate_theory_answer)  │
+│    ↓                                       │
+│  Return to User                            │
+│                                            │
+└────────────────────────────────────────────┘
+```
+
+**Integration Options**:
+1. **Optional Endpoint**: Use `/query/advanced-retrieve` when advanced RAG needed
+2. **Replace Step 3**: Use advanced RAG instead of multi_query_retrieve
+3. **Enhance Context**: Combine advanced RAG results with existing pipeline
+
+---
+
+This architecture ensures:
+✅ Modularity - Components work independently
+✅ Scalability - Parallel execution where possible
+✅ Robustness - Fallback at each stage
+✅ Performance - Optimized latency/quality trade-offs
+✅ Maintainability - Clear separation of concerns
