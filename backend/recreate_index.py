@@ -3,7 +3,7 @@ from pinecone import Pinecone, ServerlessSpec
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Initialize Pinecone
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))

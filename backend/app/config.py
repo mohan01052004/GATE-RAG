@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 def _as_bool(value: str | None) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
