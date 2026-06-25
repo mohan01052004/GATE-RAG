@@ -32,8 +32,14 @@ export default function ChatBox({
     );
   };
 
+  const isAllSelected = documents.length > 0 && tempSelectedIds.length === documents.length;
+
   const handleSearchAllToggle = (checked) => {
-    setTempSelectedIds(checked ? [] : tempSelectedIds);
+    if (checked) {
+      setTempSelectedIds(documents.map(doc => doc.id));
+    } else {
+      setTempSelectedIds([]);
+    }
   };
 
   const handleApplySelection = () => {
@@ -102,7 +108,7 @@ export default function ChatBox({
             onClick={handleOpenPanel}
             type="button"
           >
-            {effectiveSelectedIds.length === 0 
+            {effectiveSelectedIds.length === 0 || (documents.length > 0 && effectiveSelectedIds.length === documents.length)
               ? "All documents" 
               : `${effectiveSelectedIds.length} selected`}
           </button>
@@ -113,7 +119,7 @@ export default function ChatBox({
             <label className="chatbox-documents-checkbox-item chatbox-documents-all">
               <input
                 type="checkbox"
-                checked={tempSelectedIds.length === 0}
+                checked={isAllSelected}
                 onChange={(e) => handleSearchAllToggle(e.target.checked)}
               />
               <span>Search all documents</span>
@@ -128,7 +134,6 @@ export default function ChatBox({
                     type="checkbox"
                     checked={tempSelectedIds.includes(doc.id)}
                     onChange={() => handleDocumentToggle(doc.id)}
-                    disabled={tempSelectedIds.length === 0}
                   />
                   <span>{doc.subject ? `${doc.subject} — ` : ""}{doc.filename}</span>
                 </label>
