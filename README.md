@@ -76,7 +76,7 @@ A production-grade Retrieval-Augmented Generation (RAG) system for GATE examinat
 
 1. **Navigate to frontend directory**
    ```bash
-   cd ../my-app
+   cd ../frontend
    ```
 
 2. **Install dependencies**
@@ -143,7 +143,7 @@ RAG VS/
 │   ├── .env.example          # Example environment variables
 │   └── create_tables.py      # Database initialization
 │
-├── my-app/                    # React frontend
+├── frontend/                  # React frontend
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── uploadbox.js

@@ -5,7 +5,7 @@ Added "💡 Show Answer & Explanation" and "🔄 Reset" buttons to every MCQ que
 
 ## Changes Made
 
-### 1. **Frontend: `my-app/src/components/answerbox.js`**
+### 1. **Frontend: `frontend/src/components/answerbox.js`**
 
 #### State Management
 - Added `showAnswers` state to track which questions have their answers revealed
@@ -24,7 +24,7 @@ Added "💡 Show Answer & Explanation" and "🔄 Reset" buttons to every MCQ que
   - Shows only after answer is selected
   - Clears the question to start over
 
-### 2. **Frontend: `my-app/src/components/answerbox.css`**
+### 2. **Frontend: `frontend/src/components/answerbox.css`**
 
 #### Button Styling
 ```css
@@ -112,8 +112,8 @@ Added "💡 Show Answer & Explanation" and "🔄 Reset" buttons to every MCQ que
 ✅ **Visual Feedback**: Distinct styling for different button states
 
 ## Files Modified
-1. `my-app/src/components/answerbox.js` - Added button logic and handlers
-2. `my-app/src/components/answerbox.css` - Added comprehensive button styling and responsiveness
+1. `frontend/src/components/answerbox.js` - Added button logic and handlers
+2. `frontend/src/components/answerbox.css` - Added comprehensive button styling and responsiveness
 
 ## Testing Recommendations
 - Test on mobile (320px, 480px)
