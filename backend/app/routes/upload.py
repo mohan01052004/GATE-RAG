@@ -4,7 +4,7 @@ import shutil
 import os
 import threading
 
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.models import Document, DocumentTopic
 from app.services.pdf_loader import extract_text_from_pdf, extract_pages_from_pdf
 from app.services.chunker import chunk_with_metadata, get_chunking_stats
@@ -32,18 +32,21 @@ EXTRACT_IMAGES = True
 MAX_IMAGES_PER_UPLOAD = 30
 
 
-def _caption_and_upload_images_bg(
+def process_pdf_document_bg(
     pdf_bytes: bytes,
     document_id: int,
     subject: str,
     filename: str,
 ):
     """
-    Background task: saves PDF bytes to a temp file, extracts + captions images,
-    and uploads image chunks to Pinecone. Runs after the HTTP response is sent.
+    Background task to parse the PDF, extract tables, generate embeddings,
+    upload to Pinecone, populate document topics, and extract images.
+    Runs asynchronously after the HTTP response is returned.
     """
     import tempfile
+    import os
 
+    db = SessionLocal()
     tmp_path = None
     try:
         # Write bytes to a temp file
@@ -51,97 +54,28 @@ def _caption_and_upload_images_bg(
             tmp.write(pdf_bytes)
             tmp_path = tmp.name
 
-        print(f"[BG] Starting image captioning for doc_id={document_id} ({filename})")
-        raw_images = extract_images_from_pdf(tmp_path)
+        print(f"[BG-PARSE] Starting document processing for '{filename}' (ID: {document_id})...")
 
-        if not raw_images:
-            print(f"[BG] No images found in {filename}")
-            return
-
-        # Cap to MAX_IMAGES_PER_UPLOAD
-        if MAX_IMAGES_PER_UPLOAD and len(raw_images) > MAX_IMAGES_PER_UPLOAD:
-            print(f"[BG] Capping images: {len(raw_images)} -> {MAX_IMAGES_PER_UPLOAD}")
-            raw_images = raw_images[:MAX_IMAGES_PER_UPLOAD]
-
-        captioned = caption_images_with_gemini(
-            raw_images,
-            gemini_api_key=GEMINI_API_KEY,
-            gemini_model=GEMINI_MODEL,
-        )
-        image_chunks = images_to_chunks(captioned, subject=subject, filename=filename)
-
-        if image_chunks:
-            enriched = [
-                (text, {**meta, "document_id": document_id})
-                for text, meta in image_chunks
-            ]
-            upload_chunks(enriched)
-            print(f"[BG] Uploaded {len(enriched)} image chunks for doc_id={document_id}")
-        else:
-            print(f"[BG] No captionable images for doc_id={document_id}")
-
-    except Exception as e:
-        print(f"[BG] Image captioning failed for doc_id={document_id}: {e}")
-    finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.remove(tmp_path)
-
-
-@router.post("/upload")
-async def upload_pdf(
-    background_tasks: BackgroundTasks,
-    subject: str = Form(...),
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)
-):
-    path = f"temp_{file.filename}"
-
-    # Read file bytes once (needed for both text parsing and background image task)
-    file_bytes = await file.read()
-    with open(path, "wb") as f:
-        f.write(file_bytes)
-
-    try:
+        # 1. Text Parsing & Chunking
         if USE_ADVANCED_PARSING:
-            print(f"[INFO] Using advanced PDF parsing for '{file.filename}'")
-            sections = extract_structured_content(path)
+            print(f"[BG-PARSE] Using advanced PDF parsing for '{filename}'")
+            sections = extract_structured_content(tmp_path)
+            print(f"[BG-PARSE] Extracted {len(sections)} sections from PDF")
+            
+            # Find page count
+            total_pages = max([s.page_number for s in sections]) if sections else 0
+            print(f"[BG-PARSE] PDF has {total_pages} pages")
 
-            if not sections:
-                raise HTTPException(status_code=400, detail="No content extracted from document.")
-
-            print(f"[INFO] Extracted {len(sections)} sections from PDF")
-            print(f"   - Pages: {max([s.page_number for s in sections]) if sections else 0}")
-            print(f"   - Headings: {len([s for s in sections if s.section_type == 'heading'])}")
-            print(f"   - Paragraphs: {len([s for s in sections if s.section_type == 'paragraph'])}")
-            print(f"   - Lists: {len([s for s in sections if s.section_type == 'list'])}")
-
-            # Create document record
-            doc = Document(filename=file.filename, subject=subject)
-            db.add(doc)
-            db.commit()
-            db.refresh(doc)
-
-            # Hierarchical semantic chunking
             chunks_with_meta = hierarchical_chunk(
                 sections,
                 max_chunk_size=800,
                 min_chunk_size=200,
                 overlap=100
             )
-            print(f"[INFO] Created {len(chunks_with_meta)} semantic chunks")
-
+            print(f"[BG-PARSE] Created {len(chunks_with_meta)} semantic chunks")
         else:
-            pages = extract_pages_from_pdf(path)
-            text = extract_text_from_pdf(path)
-
-            if not text:
-                raise HTTPException(status_code=400, detail="No text found in the uploaded document.")
-
-            doc = Document(filename=file.filename, subject=subject)
-            db.add(doc)
-            db.commit()
-            db.refresh(doc)
-
+            pages = extract_pages_from_pdf(tmp_path)
+            text = extract_text_from_pdf(tmp_path)
             chunks_with_meta = []
             if pages:
                 for page_num, page_text in pages:
@@ -154,25 +88,20 @@ async def upload_pdf(
             else:
                 chunks_with_meta = chunk_with_metadata(text)
 
-        # ── Tables (fast — no API calls, extract synchronously) ─────────────
-        table_chunks: list = []
+        # 2. Table Extraction
+        table_chunks = []
         if EXTRACT_TABLES:
-            print(f"[INFO] Extracting tables from '{file.filename}'...")
-            tables = extract_tables_from_pdf(path)
-            table_chunks = tables_to_chunks(tables, subject=subject, filename=file.filename)
-            print(f"[INFO] {len(table_chunks)} table chunks created")
+            print(f"[BG-PARSE] Extracting tables from '{filename}'...")
+            tables = extract_tables_from_pdf(tmp_path)
+            table_chunks = tables_to_chunks(tables, subject=subject, filename=filename)
+            print(f"[BG-PARSE] {len(table_chunks)} table chunks created")
 
-    finally:
-        if os.path.exists(path):
-            os.remove(path)
+        # Print chunking statistics
+        plain_chunks = [chunk for chunk, meta in chunks_with_meta]
+        stats = get_chunking_stats(plain_chunks)
+        print(f"[BG-PARSE] Chunking stats for '{filename}': {stats}")
 
-    # Print chunking statistics
-    plain_chunks = [chunk for chunk, meta in chunks_with_meta]
-    stats = get_chunking_stats(plain_chunks)
-    print(f"[INFO] Chunking stats for '{file.filename}': {stats}")
-
-    try:
-        # Prepare text chunks with enriched metadata
+        # 3. Prepare text and table chunks with enriched metadata
         enriched_chunks = []
         topic_records = set()
         for chunk_text, chunk_meta in chunks_with_meta:
@@ -182,9 +111,9 @@ async def upload_pdf(
             page = chunk_meta.get("page") or chunk_meta.get("page_number")
 
             record_key = (
-                doc.id,
+                document_id,
                 subject,
-                file.filename,
+                filename,
                 section or "",
                 topic or "",
                 subtopic or "",
@@ -194,65 +123,120 @@ async def upload_pdf(
 
             enriched_chunks.append((chunk_text, {
                 **chunk_meta,
-                "document_id": doc.id,
+                "document_id": document_id,
                 "subject": subject,
-                "filename": file.filename,
+                "filename": filename,
                 "content_type": chunk_meta.get("content_type", "text"),
             }))
 
-        # Add table chunks
         for chunk_text, chunk_meta in table_chunks:
             enriched_chunks.append((chunk_text, {
                 **chunk_meta,
-                "document_id": doc.id,
+                "document_id": document_id,
             }))
 
-        upload_chunks(enriched_chunks)
+        # 4. Upload text/table chunks to Pinecone
+        if enriched_chunks:
+            print(f"[BG-PARSE] Uploading {len(enriched_chunks)} text/table chunks to Pinecone...")
+            upload_chunks(enriched_chunks)
+            print(f"[BG-PARSE] Main upload complete.")
 
+        # 5. Populate DB topic records
         if topic_records:
+            print(f"[BG-PARSE] Saving document topics to DB...")
             for record in topic_records:
-                doc_id, subj, filename, section, topic, subtopic, page = record
+                doc_id, subj, fname, sec, top, subtop, pg = record
                 db.add(DocumentTopic(
                     document_id=doc_id,
                     subject=subj,
-                    filename=filename,
-                    section=section or None,
-                    topic=topic or None,
-                    subtopic=subtopic or None,
-                    page=page or None,
+                    filename=fname,
+                    section=sec or None,
+                    topic=top or None,
+                    subtopic=subtop or None,
+                    page=pg or None,
                 ))
             db.commit()
+            print(f"[BG-PARSE] Saved topics to DB successfully.")
 
-    except Exception as exc:
-        db.delete(doc)
+        # 6. Extract Images & Caption using Gemini (Multimodal)
+        if EXTRACT_IMAGES and GEMINI_API_KEY:
+            print(f"[BG-PARSE] Extracting and captioning images from '{filename}'...")
+            raw_images = extract_images_from_pdf(tmp_path)
+            if raw_images:
+                if MAX_IMAGES_PER_UPLOAD and len(raw_images) > MAX_IMAGES_PER_UPLOAD:
+                    print(f"[BG-PARSE] Capping images: {len(raw_images)} -> {MAX_IMAGES_PER_UPLOAD}")
+                    raw_images = raw_images[:MAX_IMAGES_PER_UPLOAD]
+
+                captioned = caption_images_with_gemini(
+                    raw_images,
+                    gemini_api_key=GEMINI_API_KEY,
+                    gemini_model=GEMINI_MODEL,
+                )
+                image_chunks = images_to_chunks(captioned, subject=subject, filename=filename)
+                if image_chunks:
+                    enriched_images = [
+                        (text, {**meta, "document_id": document_id})
+                        for text, meta in image_chunks
+                    ]
+                    upload_chunks(enriched_images)
+                    print(f"[BG-PARSE] Uploaded {len(enriched_images)} image chunks.")
+
+        print(f"[BG-PARSE] Document '{filename}' (ID: {document_id}) fully indexed successfully!")
+
+    except Exception as e:
+        print(f"[BG-PARSE] Document processing failed: {e}")
+        try:
+            doc = db.query(Document).filter(Document.id == document_id).first()
+            if doc:
+                db.delete(doc)
+                db.commit()
+                print(f"[BG-PARSE] Cleaned up failed document record ID {document_id}")
+        except Exception as db_err:
+            print(f"[BG-PARSE] Failed to delete document record: {db_err}")
+    finally:
+        db.close()
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
+@router.post("/upload")
+async def upload_pdf(
+    background_tasks: BackgroundTasks,
+    subject: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    # Read file bytes
+    file_bytes = await file.read()
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    try:
+        # Create document record in database immediately
+        doc = Document(filename=file.filename, subject=subject)
+        db.add(doc)
         db.commit()
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(exc)}") from exc
+        db.refresh(doc)
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database initialization failed: {str(exc)}")
 
-    # ── Schedule image captioning as a background task ───────────────────────
-    # This runs AFTER the HTTP response is sent — upload feels instant to the user
-    if EXTRACT_IMAGES and GEMINI_API_KEY:
-        background_tasks.add_task(
-            _caption_and_upload_images_bg,
-            pdf_bytes=file_bytes,
-            document_id=doc.id,
-            subject=subject,
-            filename=file.filename,
-        )
-        images_status = f"queued (up to {MAX_IMAGES_PER_UPLOAD} images)"
-    else:
-        images_status = "skipped (no GEMINI_API_KEY)"
+    # Schedule complete processing in background
+    background_tasks.add_task(
+        process_pdf_document_bg,
+        pdf_bytes=file_bytes,
+        document_id=doc.id,
+        subject=subject,
+        filename=file.filename,
+    )
 
     return {
         "message": "uploaded",
         "document_id": doc.id,
-        "chunks_created": len(enriched_chunks),
-        "text_chunks": len(chunks_with_meta),
-        "table_chunks": len(table_chunks),
-        "image_chunks": "processing in background",
-        "chunking_stats": stats,
-        "parsing_mode": "advanced" if USE_ADVANCED_PARSING else "basic",
+        "filename": file.filename,
+        "status": "processing in background",
         "multimodal": {
-            "tables_extracted": len(table_chunks),
-            "images_status": images_status,
+            "tables_enabled": EXTRACT_TABLES,
+            "images_enabled": EXTRACT_IMAGES,
         }
     }
