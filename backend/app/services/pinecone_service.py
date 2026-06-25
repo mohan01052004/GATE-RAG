@@ -65,10 +65,14 @@ def upload_chunks(chunks: list[str], metadata: dict | None = None, namespace: st
         return
 
     index = get_index()
-    if namespace:
-        index.upsert(vectors=vectors, namespace=namespace)
-    else:
-        index.upsert(vectors=vectors)
+    batch_size = 100
+    print(f"[INFO] Upserting {len(vectors)} vectors to Pinecone in batches of {batch_size}...")
+    for j in range(0, len(vectors), batch_size):
+        batch = vectors[j : j + batch_size]
+        if namespace:
+            index.upsert(vectors=batch, namespace=namespace)
+        else:
+            index.upsert(vectors=batch)
     
     # Build BM25 index for hybrid search (extract just the text chunks)
     text_chunks = [chunk if isinstance(chunk, str) else chunk[0] for chunk in chunks]
