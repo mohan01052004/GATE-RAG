@@ -6,6 +6,8 @@ sqlalchemy
 psycopg2-binary
 pymupdf
 pypdf
+pdfplumber
+Pillow
 sentence-transformers
 huggingface-hub
 langchain>=0.1.14

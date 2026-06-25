@@ -10,11 +10,22 @@ from app.services.chunker import chunk_with_metadata, get_chunking_stats
 from app.services.advanced_pdf_parser import extract_structured_content
 from app.services.semantic_chunker import hierarchical_chunk
 from app.services.pinecone_service import upload_chunks
+from app.services.table_extractor import extract_tables_from_pdf, tables_to_chunks
+from app.services.image_extractor import (
+    extract_images_from_pdf,
+    caption_images_with_gemini,
+    images_to_chunks,
+)
+from app.config import GEMINI_API_KEY, GEMINI_MODEL
 
 router = APIRouter()
 
 # Enable advanced parsing - set to True to use new semantic chunking with structure preservation
 USE_ADVANCED_PARSING = True
+
+# Enable multimodal extraction (images + tables)
+EXTRACT_TABLES = True
+EXTRACT_IMAGES = True
 
 @router.post("/upload")
 async def upload_pdf(
@@ -89,6 +100,31 @@ async def upload_pdf(
                         chunks_with_meta.append((chunk_text, chunk_meta))
             else:
                 chunks_with_meta = chunk_with_metadata(text)
+
+        # ── Multimodal extraction (tables + images) ──────────────────────────
+        table_chunks: list = []
+        image_chunks: list = []
+
+        if EXTRACT_TABLES:
+            print(f"📊 Extracting tables from '{file.filename}'...")
+            tables = extract_tables_from_pdf(path)
+            table_chunks = tables_to_chunks(tables, subject=subject, filename=file.filename)
+            print(f"   ✅ {len(table_chunks)} table chunks created")
+
+        if EXTRACT_IMAGES and GEMINI_API_KEY:
+            print(f"🖼️  Extracting images from '{file.filename}'...")
+            raw_images = extract_images_from_pdf(path)
+            if raw_images:
+                captioned_images = caption_images_with_gemini(
+                    raw_images,
+                    gemini_api_key=GEMINI_API_KEY,
+                    gemini_model=GEMINI_MODEL,
+                )
+                image_chunks = images_to_chunks(captioned_images, subject=subject, filename=file.filename)
+                print(f"   ✅ {len(image_chunks)} image chunks created")
+        elif EXTRACT_IMAGES and not GEMINI_API_KEY:
+            print("⚠️  GEMINI_API_KEY not set — skipping image captioning")
+
     finally:
         if os.path.exists(path):
             os.remove(path)
@@ -99,7 +135,7 @@ async def upload_pdf(
     print(f"📝 Chunking stats for '{file.filename}': {stats}")
     
     try:
-        # Prepare chunks with enriched metadata
+        # Prepare text chunks with enriched metadata
         enriched_chunks = []
         topic_records = set()
         for chunk_text, chunk_meta in chunks_with_meta:
@@ -125,6 +161,20 @@ async def upload_pdf(
                 "document_id": doc.id,
                 "subject": subject,
                 "filename": file.filename,
+                "content_type": chunk_meta.get("content_type", "text"),
+            }))
+
+        # Enrich table and image chunks with document_id
+        for chunk_text, chunk_meta in table_chunks:
+            enriched_chunks.append((chunk_text, {
+                **chunk_meta,
+                "document_id": doc.id,
+            }))
+
+        for chunk_text, chunk_meta in image_chunks:
+            enriched_chunks.append((chunk_text, {
+                **chunk_meta,
+                "document_id": doc.id,
             }))
         
         upload_chunks(enriched_chunks)
@@ -151,6 +201,13 @@ async def upload_pdf(
         "message": "uploaded",
         "document_id": doc.id,
         "chunks_created": len(enriched_chunks),
+        "text_chunks": len(chunks_with_meta),
+        "table_chunks": len(table_chunks),
+        "image_chunks": len(image_chunks),
         "chunking_stats": stats,
-        "parsing_mode": "advanced" if USE_ADVANCED_PARSING else "basic"
+        "parsing_mode": "advanced" if USE_ADVANCED_PARSING else "basic",
+        "multimodal": {
+            "tables_extracted": len(table_chunks),
+            "images_captioned": len(image_chunks),
+        }
     }
